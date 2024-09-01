@@ -1,6 +1,8 @@
 import streamlit as st
 from PyPDF2 import PdfReader
-from transformers import BartTokenizer, BartForConditionalGeneration, pipeline
+from transformers import BartTokenizer, BartForConditionalGeneration
+import tempfile
+import os
 
 # Load BART model for Summarization
 tokenizer = BartTokenizer.from_pretrained("facebook/bart-large-cnn")
@@ -22,7 +24,6 @@ def summarize_text(text):
         summary = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
         return summary
     except Exception as e:
-        print("Detailed Error:", e)
         return f"Error summarizing text: {e}"
 
 # Streamlit app
@@ -34,8 +35,15 @@ def main():
     pdf_file = st.file_uploader("Upload PDF", type="pdf")
 
     if pdf_file:
+        # Save uploaded file to a temporary location to avoid memory overload
+        with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+            tmp_file.write(pdf_file.read())
+            tmp_file_path = tmp_file.name
+
         st.write("Extracting text from the PDF...")
-        extracted_text = extract_text_from_pdf(pdf_file)
+        extracted_text = extract_text_from_pdf(tmp_file_path)
+        os.remove(tmp_file_path)  # Clean up the temp file
+
         st.write("Summarizing the health report...")
         summary = summarize_text(extracted_text)
         st.write("Summary:")
